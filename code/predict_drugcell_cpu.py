@@ -1,3 +1,8 @@
+'''
+Date: 2022-04-29 12:02:15
+LastEditors: yuhhong
+LastEditTime: 2022-04-30 15:25:57
+'''
 import sys
 import os
 import numpy as np
@@ -60,36 +65,35 @@ def predict_dcell(predict_data, gene_dim, drug_dim, model_file, hidden_folder, b
 	np.savetxt(result_file+'/drugcell.predict', test_predict.numpy(),'%.4e')
 
 
+if __name__ == '__main__':
+	parser = argparse.ArgumentParser(description='Train dcell')
+	parser.add_argument('-predict', help='Dataset to be predicted', type=str)
+	parser.add_argument('-batchsize', help='Batchsize', type=int, default=1000)
+	parser.add_argument('-gene2id', help='Gene to ID mapping file', type=str, default=1000)
+	parser.add_argument('-drug2id', help='Drug to ID mapping file', type=str, default=1000)
+	parser.add_argument('-cell2id', help='Cell to ID mapping file', type=str, default=1000)
+	parser.add_argument('-load', help='Model file', type=str, default='MODEL/model_200')
+	parser.add_argument('-hidden', help='Hidden output folder', type=str, default='Hidden/')
+	parser.add_argument('-result', help='Result file name', type=str, default='Result/')
+	parser.add_argument('-genotype', help='Mutation information for cell lines', type=str)
+	parser.add_argument('-fingerprint', help='Morgan fingerprint representation for drugs', type=str)
 
+	opt = parser.parse_args()
+	torch.set_printoptions(precision=5)
 
-parser = argparse.ArgumentParser(description='Train dcell')
-parser.add_argument('-predict', help='Dataset to be predicted', type=str)
-parser.add_argument('-batchsize', help='Batchsize', type=int, default=1000)
-parser.add_argument('-gene2id', help='Gene to ID mapping file', type=str, default=1000)
-parser.add_argument('-drug2id', help='Drug to ID mapping file', type=str, default=1000)
-parser.add_argument('-cell2id', help='Cell to ID mapping file', type=str, default=1000)
-parser.add_argument('-load', help='Model file', type=str, default='MODEL/model_200')
-parser.add_argument('-hidden', help='Hidden output folder', type=str, default='Hidden/')
-parser.add_argument('-result', help='Result file name', type=str, default='Result/')
-parser.add_argument('-genotype', help='Mutation information for cell lines', type=str)
-parser.add_argument('-fingerprint', help='Morgan fingerprint representation for drugs', type=str)
+	predict_data, cell2id_mapping, drug2id_mapping = prepare_predict_data(opt.predict, opt.cell2id, opt.drug2id)
+	gene2id_mapping = load_mapping(opt.gene2id)
 
-opt = parser.parse_args()
-torch.set_printoptions(precision=5)
+	# load cell/drug features
+	cell_features = np.genfromtxt(opt.genotype, delimiter=',')
+	drug_features = np.genfromtxt(opt.fingerprint, delimiter=',')
 
-predict_data, cell2id_mapping, drug2id_mapping = prepare_predict_data(opt.predict, opt.cell2id, opt.drug2id)
-gene2id_mapping = load_mapping(opt.gene2id)
+	print("printing drug features")
+	print(drug_features)
 
-# load cell/drug features
-cell_features = np.genfromtxt(opt.genotype, delimiter=',')
-drug_features = np.genfromtxt(opt.fingerprint, delimiter=',')
+	num_cells = len(cell2id_mapping)
+	num_drugs = len(drug2id_mapping)
+	num_genes = len(gene2id_mapping)
+	drug_dim = len(drug_features[0,:])
 
-print("printing drug features")
-print(drug_features)
-
-num_cells = len(cell2id_mapping)
-num_drugs = len(drug2id_mapping)
-num_genes = len(gene2id_mapping)
-drug_dim = len(drug_features[0,:])
-
-predict_dcell(predict_data, num_genes, drug_dim, opt.load, opt.hidden, opt.batchsize, opt.result, cell_features, drug_features)	
+	predict_dcell(predict_data, num_genes, drug_dim, opt.load, opt.hidden, opt.batchsize, opt.result, cell_features, drug_features)	

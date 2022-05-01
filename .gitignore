@@ -1,0 +1,4 @@
+data.tgz
+data_full/
+data/drugcell_all.txt
+pretrained_model/drugcell_v1.pt
