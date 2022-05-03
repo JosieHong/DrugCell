@@ -1,7 +1,7 @@
 ###
  # @Date: 2022-04-28 13:01:14
  # @LastEditors: yuhhong
- # @LastEditTime: 2022-05-03 11:21:29
+ # @LastEditTime: 2022-05-03 11:16:47
 ### 
 #!/bin/bash
 inputdir="../data/"
@@ -17,7 +17,7 @@ drugfile=$inputdir"drug2fingerprint.txt"
 
 cudaid=1
 
-modeldir="./ours_train/Model_sample"
+modeldir="./ours_train_unhash/Model_sample"
 mkdir $modeldir
 
 source activate pytorch3drugcell

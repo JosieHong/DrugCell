@@ -5,6 +5,10 @@ import networkx.algorithms.components.connected as nxacc
 import networkx.algorithms.dag as nxadag
 import numpy as np
 
+from rdkit import Chem
+from rdkit.Chem import AllChem
+
+
 def pearson_corr(x, y):
 	xx = x - torch.mean(x)
 	yy = y - torch.mean(y)
@@ -140,7 +144,7 @@ def prepare_train_data(train_file, test_file, cell2id_mapping_file, drug2id_mapp
 	return (torch.Tensor(train_feature), torch.FloatTensor(train_label), torch.Tensor(test_feature), torch.FloatTensor(test_label)), cell2id_mapping, drug2id_mapping
 
 
-def build_input_vector(input_data, cell_features, drug_features):
+def build_input_vector(input_data, cell_features, drug_features): 
 	genedim = len(cell_features[0,:])
 	drugdim = len(drug_features[0,:])
 	feature = np.zeros((input_data.size()[0], (genedim+drugdim)))
@@ -151,3 +155,80 @@ def build_input_vector(input_data, cell_features, drug_features):
 	feature = torch.from_numpy(feature).float()
 	return feature
 
+
+# -----------------------------------------
+# Our own utils
+# -----------------------------------------
+
+def load_our_drug_fp(drug2id_mapping_file): 
+	
+	with open(drug2id_mapping_file, 'r') as f:
+		smiles_list = [d.split()[1] for d in f.read().split('\n') if d != '']
+
+	drug_features = []
+	for smiles in smiles_list:
+		mol = Chem.MolFromSmiles(smiles)
+		fp = AllChem.GetMorganFingerprintAsBitVect(mol, 2)
+		# fp = AllChem.GetHashedMorganFingerprint(mol, 2)
+		drug_features.append(np.array(fp))
+
+	return np.array(drug_features)
+
+def load_our_drug_graph_features(drug2id_mapping_file): 
+	
+	with open(drug2id_mapping_file, 'r') as f:
+		smiles_list = [d.split()[1] for d in f.read().split('\n') if d != '']
+
+	drug_graphs = []
+	drug_features = []
+	
+	max_atom_num = 300
+	for smiles in smiles_list:
+		mol = Chem.MolFromSmiles(smiles)
+		drug_graphs.append(create_graph(mol, max_atom_num))
+		drug_features.append(create_feature(mol, max_atom_num))
+
+	return np.array(drug_graphs), np.array(drug_features)
+
+def create_graph(mol, size=50): 
+    A = np.zeros((size, size))
+    for atom in mol.GetAtoms():
+        i = atom.GetIdx()
+        for neighbor in atom.GetNeighbors():
+            j = neighbor.GetIdx()
+            A[i, j] = 1
+            A[j, i] = 1
+    return A
+
+def create_feature(mol, size=50): 
+    X = np.zeros((size, 4))
+    for atom in mol.GetAtoms():
+        X[atom.GetIdx(), 0] = atom.GetMass()
+        X[atom.GetIdx(), 1] = atom.GetTotalNumHs()
+        X[atom.GetIdx(), 2] = atom.GetIsAromatic()
+        X[atom.GetIdx(), 3] = atom.GetExplicitValence()
+    return X
+
+def build_input_seperately(input_data, cell_features, graph_features, drug_features): 
+	celldim = len(cell_features[0,:])
+	cellf = np.zeros((input_data.size()[0], celldim))
+
+	graphdim = len(graph_features[0,:])
+	graphf = np.zeros((input_data.size()[0], graphdim, graphdim))
+
+	_, atomdim, drugdim = drug_features.shape
+	drugf = np.zeros((input_data.size()[0], atomdim, drugdim))
+	# print(cell_features.shape, graph_features.shape, drug_features.shape)
+	# print(cellf.shape, graphf.shape, drugf.shape)
+	# (1225, 3008) (684, 300, 300) (684, 300, 4)
+	# (5000, 3008) (5000, 300, 300) (5000, 300, 4)
+
+	for i in range(input_data.size()[0]): 
+		cellf[i] = np.array(cell_features[int(input_data[i,0])])
+		graphf[i] = np.array(graph_features[int(input_data[i,1])])
+		drugf[i] = np.array(drug_features[int(input_data[i,1])])
+
+	cellf = torch.from_numpy(cellf).float()
+	graphf = torch.from_numpy(graphf).float()
+	drugf = torch.from_numpy(drugf).float()
+	return cellf, graphf, drugf

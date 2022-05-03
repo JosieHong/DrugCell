@@ -1,7 +1,7 @@
 ###
  # @Date: 2022-04-28 12:56:40
  # @LastEditors: yuhhong
- # @LastEditTime: 2022-04-30 20:45:22
+ # @LastEditTime: 2022-05-03 11:21:36
 ### 
 #!/bin/bash
 inputdir="../data/"
@@ -15,8 +15,8 @@ drugfile=$inputdir"drug2fingerprint.txt"
 
 modelfile="./Model_sample/model_final.pt"
 
-resultdir="Result_sample"
-hiddendir="Hidden_sample"
+resultdir="./ours_train/Result_sample"
+hiddendir="./ours_train/Hidden_sample"
 
 cudaid=$1
 

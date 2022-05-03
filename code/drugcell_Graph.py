@@ -1,7 +1,9 @@
 import sys
 import os
 import numpy as np
+import math
 import torch
+from torch.nn import Parameter
 import torch.utils.data as du
 from torch.autograd import Variable
 import torch.nn as nn
@@ -9,11 +11,11 @@ import torch.nn.functional as F
 from util import *
 
 
-class drugcell_nn(nn.Module):
+class drugcell_graph(nn.Module):
 
 	def __init__(self, term_size_map, term_direct_gene_map, dG, ngene, ndrug, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final):
 	
-		super(drugcell_nn, self).__init__()
+		super(drugcell_graph, self).__init__()
 
 		self.root = root
 		self.num_hiddens_genotype = num_hiddens_genotype
@@ -34,7 +36,9 @@ class drugcell_nn(nn.Module):
 		self.construct_NN_graph(dG)
 
 		# add modules for neural networks to process drugs	
-		self.construct_NN_drug()
+		# self.construct_NN_drug()
+		# add graph modules to process drugs
+		self.construct_GNN_drug()
 
 		# add modules for final layer
 		final_input_size = num_hiddens_genotype + num_hiddens_drug[-1]
@@ -81,6 +85,13 @@ class drugcell_nn(nn.Module):
 
 			input_size = self.num_hiddens_drug[i]
 
+	# add graph gcn to drugcell
+	def construct_GNN_drug(self):
+		input_size = self.drug_dim
+
+		for i in range(len(self.num_hiddens_drug)): 
+			self.add_module('drug_graph_layer_' + str(i+1), simple_gcn_layer(input_size, self.num_hiddens_drug[i]))
+			input_size = self.num_hiddens_drug[i]
 
 	# start from bottom (leaves), and start building a neural network using the given ontology
 	# adding modules --- the modules are not connected yet
@@ -128,9 +139,7 @@ class drugcell_nn(nn.Module):
 
 
 	# definition of forward function
-	def forward(self, x):
-		gene_input = x.narrow(1, 0, self.gene_dim)
-		drug_input = x.narrow(1, self.gene_dim, self.drug_dim)
+	def forward(self, gene_input, drug_input, drug_graph): 
 
 		# define forward function for genotype dcell #############################################
 		term_gene_out_map = {}
@@ -164,13 +173,10 @@ class drugcell_nn(nn.Module):
 
 		# define forward function for drug dcell #################################################
 		drug_out = drug_input
-
 		for i in range(1, len(self.num_hiddens_drug)+1, 1):
-			drug_out = self._modules['drug_batchnorm_layer_'+str(i)](torch.tanh(self._modules['drug_linear_layer_' + str(i)](drug_out)))
-			term_NN_out_map['drug_'+str(i)] = drug_out
-
-			aux_layer1_out = torch.tanh(self._modules['drug_aux_linear_layer1_'+str(i)](drug_out))
-			aux_out_map['drug_'+str(i)] = self._modules['drug_aux_linear_layer2_'+str(i)](aux_layer1_out) 		
+			drug_out = F.relu(self._modules['drug_graph_layer_' + str(i)](drug_out, drug_graph))
+		# max pooling
+		drug_out = torch.max(drug_out, dim=1)[0]
 
 		# connect two neural networks at the top #################################################
 		final_input = torch.cat((term_NN_out_map[self.root], drug_out), 1)
@@ -182,3 +188,37 @@ class drugcell_nn(nn.Module):
 		aux_out_map['final'] = self._modules['final_linear_layer_output'](aux_layer_out)
 
 		return aux_out_map, term_NN_out_map
+
+
+class simple_gcn_layer(nn.Module):
+	"""
+	Simple GCN layer, similar to https://arxiv.org/abs/1609.02907
+	"""
+	def __init__(self, in_features, out_features, bias=False):
+		super(simple_gcn_layer, self).__init__()
+		self.in_features = in_features
+		self.out_features = out_features
+		self.weight = Parameter(torch.Tensor(in_features, out_features))
+		if bias:
+			self.bias = Parameter(torch.Tensor(1, 1, out_features))
+		else:
+			self.register_parameter('bias', None)
+		self.reset_parameters()
+
+	def reset_parameters(self):
+		stdv = 1. / math.sqrt(self.weight.size(1))
+		self.weight.data.uniform_(-stdv, stdv)
+		if self.bias is not None:
+			self.bias.data.uniform_(-stdv, stdv)
+
+	def forward(self, input, adj): 
+		'''
+		Inputs: input size: (batch size, atom num, feature num)
+				adj size: 	(batch size, atom num, atom num)
+		'''
+		support = torch.matmul(input, self.weight)
+		output = torch.matmul(adj, support)
+		if self.bias is not None:
+			return output + self.bias
+		else:
+			return output

@@ -1,16 +1,32 @@
 <!--
  * @Date: 2022-04-30 16:20:28
  * @LastEditors: yuhhong
- * @LastEditTime: 2022-05-01 12:17:45
+ * @LastEditTime: 2022-05-03 13:44:37
 -->
 # I529 - DrugCell
 
 This is the final project of I-529. We attempt to do some modification of DrugCell. 
 
-| Model                       | Test Pearson Corr |
-|-----------------------------|-------------------|
-| Pretrained model            | 0.822805          |
-| Train on `drugcell_all.txt` | 0.808271          |
+| Model                                           | Test Pearson Corr |
+|-------------------------------------------------|-------------------|
+| Pretrained model                                | 0.822805          |
+| Train on `drugcell_all.txt` & using hashed FP   | 0.808271          |
+| Train on `drugcell_all.txt` & using unhashed FP | -                 |
+| Train on `drugcell_all.txt` & molecules graph   | -                 |
+
+
+<!-- ## Setup TorchDrug
+
+```bash
+# pytorch
+conda install pytorch==1.10.0 torchvision==0.11.0 torchaudio==0.10.0 cudatoolkit=11.3 -c pytorch -c conda-forge
+# pytorch-scatter
+conda install pytorch-scatter -c pyg
+# torchdrug
+pip install torchdrug
+``` -->
+
+
 
 ## Dataset
 
@@ -22,6 +38,8 @@ $ cat drugcell_train.txt | wc -l
 $ cat drugcell_test.txt | wc -l
 1000
 ```
+
+
 
 ## Train on the whole dataset
 
@@ -39,9 +57,15 @@ Test pearson corr       GO:0008150      0.822805
 # 2. train our own model
 ./ours_train.sh
 
-# test our own model
+# other exp
+./ours_train_unhash.sh
+./ours_train_graph.sh
+
+# 3. test our own model
 ./ours_test.sh
 ```
+
+
 
 ## Reference
 

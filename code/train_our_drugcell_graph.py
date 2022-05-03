@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import util
 from util import *
-from drugcell_NN import *
+from drugcell_Graph import drugcell_graph
 import argparse
 import numpy as np
 import time
@@ -34,14 +34,14 @@ def create_term_mask(term_direct_gene_map, gene_dim):
 	return term_mask_map
 
  
-def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_dim, drug_dim, model_save_folder, train_epochs, batch_size, learning_rate, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, cell_features, drug_features):
+def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_dim, drug_dim, model_save_folder, train_epochs, batch_size, learning_rate, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, cell_features, drug_graphs, drug_features):
 
 	epoch_start_time = time.time()
 	best_model = 0
 	max_corr = 0
 
 	# dcell neural network
-	model = drugcell_nn(term_size_map, term_direct_gene_map, dG, gene_dim, drug_dim, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final)
+	model = drugcell_graph(term_size_map, term_direct_gene_map, dG, gene_dim, drug_dim, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final)
 
 	train_feature, train_label, test_feature, test_label = train_data
 
@@ -74,16 +74,18 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 
 		for i, (inputdata, labels) in enumerate(train_loader):
 			# Convert torch tensor to Variable
-			features = build_input_vector(inputdata, cell_features, drug_features) # inputdata are drugid and cellid
+			cellf, graphf, drugf = build_input_seperately(inputdata, cell_features, drug_graphs, drug_features) # inputdata are drugid and cellid
 
-			cuda_features = torch.autograd.Variable(features.cuda(CUDA_ID))
+			cuda_cellf = torch.autograd.Variable(cellf.cuda(CUDA_ID))
+			cuda_graphf = torch.autograd.Variable(graphf.cuda(CUDA_ID))
+			cuda_drugf = torch.autograd.Variable(drugf.cuda(CUDA_ID))
 			cuda_labels = torch.autograd.Variable(labels.cuda(CUDA_ID))
 
 			# Forward + Backward + Optimize
 			optimizer.zero_grad()  # zero the gradient buffer
 
 			# Here term_NN_out_map is a dictionary 
-			aux_out_map, _ = model(cuda_features)
+			aux_out_map, _ = model(cuda_cellf, cuda_drugf, cuda_graphf)
 
 			if train_predict.size()[0] == 0:
 				train_predict = aux_out_map['final'].data
@@ -121,10 +123,13 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 
 		for i, (inputdata, labels) in enumerate(test_loader):
 			# Convert torch tensor to Variable
-			features = build_input_vector(inputdata, cell_features, drug_features)
-			cuda_features = Variable(features.cuda(CUDA_ID))
+			cellf, graphf, drugf = build_input_seperately(inputdata, cell_features, drug_graphs, drug_features) # inputdata are drugid and cellid
 
-			aux_out_map, _ = model(cuda_features)
+			cuda_cellf = torch.autograd.Variable(cellf.cuda(CUDA_ID))
+			cuda_graphf = torch.autograd.Variable(graphf.cuda(CUDA_ID))
+			cuda_drugf = torch.autograd.Variable(drugf.cuda(CUDA_ID))
+
+			aux_out_map, _ = model(cuda_cellf, cuda_drugf, cuda_graphf)
 
 			if test_predict.size()[0] == 0:
 				test_predict = aux_out_map['final'].data
@@ -177,12 +182,14 @@ if __name__ == '__main__':
 
 	# load cell/drug features
 	cell_features = np.genfromtxt(opt.genotype, delimiter=',')
-	drug_features = np.genfromtxt(opt.fingerprint, delimiter=',')
+	# drug_features = np.genfromtxt(opt.fingerprint, delimiter=',')
+	drug_graphs, drug_features = load_our_drug_graph_features(opt.drug2id)
+	# print(drug_graphs.shape, drug_features.shape) # (684, 300, 300) (684, 300, 4)
 
 	num_cells = len(cell2id_mapping)
 	num_drugs = len(drug2id_mapping)
 	num_genes = len(gene2id_mapping)
-	drug_dim = len(drug_features[0,:])
+	drug_dim = len(drug_features[0,0,:])
 
 	# load ontology
 	dG, root, term_size_map, term_direct_gene_map = load_ontology(opt.onto, gene2id_mapping)
@@ -197,5 +204,5 @@ if __name__ == '__main__':
 
 	CUDA_ID = opt.cuda
 
-	train_model(root, term_size_map, term_direct_gene_map, dG, train_data, num_genes, drug_dim, opt.modeldir, opt.epoch, opt.batchsize, opt.lr, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, cell_features, drug_features)
+	train_model(root, term_size_map, term_direct_gene_map, dG, train_data, num_genes, drug_dim, opt.modeldir, opt.epoch, opt.batchsize, opt.lr, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, cell_features, drug_graphs, drug_features)
 

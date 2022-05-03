@@ -177,7 +177,8 @@ if __name__ == '__main__':
 
 	# load cell/drug features
 	cell_features = np.genfromtxt(opt.genotype, delimiter=',')
-	drug_features = np.genfromtxt(opt.fingerprint, delimiter=',')
+	# drug_features = np.genfromtxt(opt.fingerprint, delimiter=',')
+	drug_features = load_our_drug_fp(opt.drug2id)
 
 	num_cells = len(cell2id_mapping)
 	num_drugs = len(drug2id_mapping)
