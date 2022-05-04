@@ -1,25 +1,29 @@
 <!--
  * @Date: 2022-04-30 16:20:28
  * @LastEditors: yuhhong
- * @LastEditTime: 2022-05-03 21:49:44
+ * @LastEditTime: 2022-05-03 22:45:12
 -->
 # I529 - Experiments on DrugCell
 
-<img src="./img/drugcell_graph.png" width="60%">
+
+
+<img src="./img/drugcell_graph.png" width="800">
 
 This is the final project of I-529. We did the following experiments based on DrugCell:
 
-- Unhashed fingerprints of drugs
-- Using Graph Convolution Network (GCN) to embed drugs 
+- Using unhashed fingerprints of drugs;
+- Using Graph Convolution Network (GCN) to embed drugs.  
 
 The results are: 
 
-| Model                                           | Test Pearson Corr |
-|-------------------------------------------------|-------------------|
-| Pretrained model                                | 0.822805          |
-| Train on `drugcell_all.txt` & using hashed FP   | 0.808271          |
-| Train on `drugcell_all.txt` & using unhashed FP | 0.807748          |
-| Train on `drugcell_all.txt` & molecules graph   | -                 |
+| Model                                            | Test Pearson Corr |
+|--------------------------------------------------|-------------------|
+| Pretrained model                                 | 0.822805          |
+| Train on `drugcell_all.txt`                      | 0.808271          |
+| Train on `drugcell_all.txt` & using unhashed FP  | 0.807748          |
+| Train on `drugcell_train.txt`                    | 0.445488          |
+| Train on `drugcell_train.txt` & drug graph (GCN) | 0.234693          |
+
 
 
 <!-- ## Setup TorchDrug
@@ -58,6 +62,7 @@ pip install torchdrug
 
 4. Q&A (10 pts)
 ``` -->
+
 
 ## Dataset
 
