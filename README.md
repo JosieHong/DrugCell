@@ -1,11 +1,11 @@
 <!--
  * @Date: 2022-04-30 16:20:28
  * @LastEditors: yuhhong
- * @LastEditTime: 2022-05-03 21:47:21
+ * @LastEditTime: 2022-05-03 21:49:44
 -->
 # I529 - Experiments on DrugCell
 
-<img src="./img/drugcell_graph.png" width="30%">
+<img src="./img/drugcell_graph.png" width="60%">
 
 This is the final project of I-529. We did the following experiments based on DrugCell:
 
