@@ -1,7 +1,7 @@
 ###
  # @Date: 2022-04-28 12:56:40
  # @LastEditors: yuhhong
- # @LastEditTime: 2022-05-04 10:34:27
+ # @LastEditTime: 2022-05-04 10:37:07
 ### 
 #!/bin/bash
 inputdir="../data/"
@@ -13,10 +13,10 @@ testdatafile=$inputdir"drugcell_test.txt"
 mutationfile=$inputdir"cell2mutation.txt"
 drugfile=$inputdir"drug2fingerprint.txt"
 
-modelfile="./ours_train/Model_sample/model_final.pt"
+modelfile="./ours_train_unhash/Model_sample/model_final.pt"
 
-resultdir="./ours_train/Result_sample"
-hiddendir="./ours_train/Hidden_sample"
+resultdir="./ours_train_unhash/Result_sample"
+hiddendir="./ours_train_unhash/Hidden_sample"
 
 cudaid=$1
 
