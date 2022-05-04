@@ -1,7 +1,7 @@
 <!--
  * @Date: 2022-04-30 16:20:28
  * @LastEditors: yuhhong
- * @LastEditTime: 2022-05-03 13:44:37
+ * @LastEditTime: 2022-05-03 15:48:47
 -->
 # I529 - DrugCell
 
@@ -11,7 +11,7 @@ This is the final project of I-529. We attempt to do some modification of DrugCe
 |-------------------------------------------------|-------------------|
 | Pretrained model                                | 0.822805          |
 | Train on `drugcell_all.txt` & using hashed FP   | 0.808271          |
-| Train on `drugcell_all.txt` & using unhashed FP | -                 |
+| Train on `drugcell_all.txt` & using unhashed FP | 0.807748          |
 | Train on `drugcell_all.txt` & molecules graph   | -                 |
 
 
