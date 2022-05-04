@@ -1,11 +1,18 @@
 <!--
  * @Date: 2022-04-30 16:20:28
  * @LastEditors: yuhhong
- * @LastEditTime: 2022-05-03 15:48:47
+ * @LastEditTime: 2022-05-03 21:47:21
 -->
-# I529 - DrugCell
+# I529 - Experiments on DrugCell
 
-This is the final project of I-529. We attempt to do some modification of DrugCell. 
+<img src="./img/drugcell_graph.png" width="30%">
+
+This is the final project of I-529. We did the following experiments based on DrugCell:
+
+- Unhashed fingerprints of drugs
+- Using Graph Convolution Network (GCN) to embed drugs 
+
+The results are: 
 
 | Model                                           | Test Pearson Corr |
 |-------------------------------------------------|-------------------|
@@ -26,7 +33,31 @@ conda install pytorch-scatter -c pyg
 pip install torchdrug
 ``` -->
 
+<!-- ## Pre 
 
+```
+1. Model description (30 pts)
+  - DrugCell
+    - Data encoding:
+      - genotypes are encoded to binary mutations
+      - drugs are encoded to a hashed binary vector of Morgan fingerprint
+    - Model
+  - *graph*:
+    - Data encoding:
+      - genotypes are encoded to binary mutations
+      - drugs are encoded to adjacency matrix and features matrix
+    - Using a graph model embedding the drugs
+
+2. Data and Metric (20 pts)
+  - Data: the Cancer Therapeutics Response Portal (CTRP) v2 and the Genomics of Drug Sensitivity in Cancer (GDSC) database from DrugCell
+  - Metric: Pearson correlation
+  
+3. Results and Conclusion (40 pts)
+  - hash or unhash do not have an obvious effect on prediction
+  - expect graph model can embed better than fingerprint
+
+4. Q&A (10 pts)
+``` -->
 
 ## Dataset
 

@@ -191,23 +191,27 @@ def load_our_drug_graph_features(drug2id_mapping_file):
 	return np.array(drug_graphs), np.array(drug_features)
 
 def create_graph(mol, size=50): 
-    A = np.zeros((size, size))
-    for atom in mol.GetAtoms():
-        i = atom.GetIdx()
-        for neighbor in atom.GetNeighbors():
-            j = neighbor.GetIdx()
-            A[i, j] = 1
-            A[j, i] = 1
-    return A
+	A = np.zeros((size, size))
+	for atom in mol.GetAtoms():
+		i = atom.GetIdx()
+		for neighbor in atom.GetNeighbors():
+			j = neighbor.GetIdx()
+			A[i, j] = 1
+			A[j, i] = 1
+	return A
 
 def create_feature(mol, size=50): 
-    X = np.zeros((size, 4))
-    for atom in mol.GetAtoms():
-        X[atom.GetIdx(), 0] = atom.GetMass()
-        X[atom.GetIdx(), 1] = atom.GetTotalNumHs()
-        X[atom.GetIdx(), 2] = atom.GetIsAromatic()
-        X[atom.GetIdx(), 3] = atom.GetExplicitValence()
-    return X
+	X = np.zeros((size, 8))
+	for atom in mol.GetAtoms():
+		X[atom.GetIdx(), 0] = atom.GetMass() # 1. atomic mass;
+		X[atom.GetIdx(), 1] = atom.GetTotalNumHs() # 2. total number of Hs (explicit and implicit);
+		X[atom.GetIdx(), 2] = atom.GetIsAromatic() # 3. Is aromatic;
+		X[atom.GetIdx(), 3] = atom.GetExplicitValence() # 4. valence minus the number of hydrogens;
+		X[atom.GetIdx(), 4] = atom.GetDegree() # 5. number of immediate neighbors who are “heavy” (nonhydrogen) atoms;
+		X[atom.GetIdx(), 5] = atom.GetFormalCharge() # 6. atomic charge;
+		X[atom.GetIdx(), 6] = atom.GetNumImplicitHs() # 7. number of implicit hydrogens;
+		X[atom.GetIdx(), 7] = int(atom.IsInRing()) # 8. Is in a ring 
+	return X
 
 def build_input_seperately(input_data, cell_features, graph_features, drug_features): 
 	celldim = len(cell_features[0,:])

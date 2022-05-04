@@ -1,11 +1,7 @@
 import sys
-import os
-import numpy as np
 import math
 import torch
 from torch.nn import Parameter
-import torch.utils.data as du
-from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 from util import *
