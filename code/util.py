@@ -213,24 +213,46 @@ def create_feature(mol, size=50):
 		X[atom.GetIdx(), 7] = int(atom.IsInRing()) # 8. Is in a ring 
 	return X
 
-def build_input_seperately(input_data, cell_features, graph_features, drug_features): 
-	celldim = len(cell_features[0,:])
-	cellf = np.zeros((input_data.size()[0], celldim))
+def build_input_seperately_batched(input_data, cell_features, graph_features, drug_features, batch_size): 
+	'''
+	input_data size: [batch size, 2]
+	'''
+	batch_size, _ = input_data.shape
 
-	graphdim = len(graph_features[0,:])
-	graphf = np.zeros((input_data.size()[0], graphdim, graphdim))
+	_, celldim = cell_features.shape
+	cellf = np.zeros((batch_size, celldim))
+
+	_, _, graphdim = graph_features.shape
+	graphf = np.zeros((graphdim*batch_size, graphdim*batch_size))
 
 	_, atomdim, drugdim = drug_features.shape
-	drugf = np.zeros((input_data.size()[0], atomdim, drugdim))
+	drugf = np.zeros((atomdim*batch_size, drugdim*batch_size))
 	# print(cell_features.shape, graph_features.shape, drug_features.shape)
-	# print(cellf.shape, graphf.shape, drugf.shape)
 	# (1225, 3008) (684, 300, 300) (684, 300, 4)
-	# (5000, 3008) (5000, 300, 300) (5000, 300, 4)
+	# print(cellf.shape, graphf.shape, drugf.shape)
+	# (4, 3008) (1200, 1200) (1200, 32)
 
 	for i in range(input_data.size()[0]): 
 		cellf[i] = np.array(cell_features[int(input_data[i,0])])
-		graphf[i] = np.array(graph_features[int(input_data[i,1])])
-		drugf[i] = np.array(drug_features[int(input_data[i,1])])
+		graphf[i*graphdim:(i+1)*graphdim, i*graphdim:(i+1)*graphdim] = np.array(graph_features[int(input_data[i,1])])
+		drugf[i*atomdim:(i+1)*atomdim, i*drugdim:(i+1)*drugdim] = np.array(drug_features[int(input_data[i,1])])
+
+	cellf = torch.from_numpy(cellf).float()
+	graphf = torch.from_numpy(graphf).float()
+	drugf = torch.from_numpy(drugf).float()
+	# print(cellf.size(), graphf.size(), drugf.size())
+	# torch.Size([4, 3008]) torch.Size([1200, 1200]) torch.Size([1200, 32])
+	return cellf, graphf, drugf
+
+
+def build_input_seperately(input_data, cell_features, graph_features, drug_features): 
+	'''
+	It should be noticed that because of the GCN and GAT, we will 
+	not load the batched data here. 
+	'''
+	cellf = np.array(cell_features[int(input_data[0])])
+	graphf= np.array(graph_features[int(input_data[1])])
+	drugf = np.array(drug_features[int(input_data[1])])
 
 	cellf = torch.from_numpy(cellf).float()
 	graphf = torch.from_numpy(graphf).float()

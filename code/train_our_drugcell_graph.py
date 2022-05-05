@@ -7,7 +7,7 @@ from drugcell_Graph import drugcell_graph
 import argparse
 import numpy as np
 import time
-
+from tqdm import tqdm
 
 # build mask: matrix (nrows = number of relevant gene set, ncols = number all genes)
 # elements of matrix are 1 if the corresponding gene is one of the relevant genes
@@ -36,7 +36,7 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 	max_corr = 0
 
 	# dcell neural network
-	model = drugcell_graph(term_size_map, term_direct_gene_map, dG, gene_dim, drug_dim, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final)
+	model = drugcell_graph(term_size_map, term_direct_gene_map, dG, gene_dim, drug_dim, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, batch_size)
 
 	train_feature, train_label, test_feature, test_label = train_data
 
@@ -57,7 +57,11 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 			param.data = torch.mul(param.data, term_mask_map[term_name]) * 0.1
 		else:
 			param.data = param.data * 0.1
-
+	
+	# non-batch
+	# train_loader = du.DataLoader(du.TensorDataset(train_feature,train_label), batch_size=None, shuffle=False)
+	# test_loader = du.DataLoader(du.TensorDataset(test_feature,test_label), batch_size=None, shuffle=False)
+	# batch
 	train_loader = du.DataLoader(du.TensorDataset(train_feature,train_label), batch_size=batch_size, shuffle=False)
 	test_loader = du.DataLoader(du.TensorDataset(test_feature,test_label), batch_size=batch_size, shuffle=False)
 
@@ -67,44 +71,57 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 		model.train()
 		train_predict = torch.zeros(0,0).cuda(CUDA_ID)
 
-		for i, (inputdata, labels) in enumerate(train_loader):
-			# Convert torch tensor to Variable
-			cellf, graphf, drugf = build_input_seperately(inputdata, cell_features, drug_graphs, drug_features) # inputdata are drugid and cellid
+		with tqdm(total=len(train_loader)) as bar:
+			for i, (inputdata, labels) in enumerate(train_loader):
+				# Convert torch tensor to Variable
+				# non-batch
+				# cellf, graphf, drugf = build_input_seperately(inputdata, cell_features, drug_graphs, drug_features) # inputdata are drugid and cellid
+				# batch
+				cellf, graphf, drugf = build_input_seperately_batched(inputdata, cell_features, drug_graphs, drug_features, batch_size) # inputdata are drugid and cellid
 
-			cuda_cellf = torch.autograd.Variable(cellf.cuda(CUDA_ID))
-			cuda_graphf = torch.autograd.Variable(graphf.cuda(CUDA_ID))
-			cuda_drugf = torch.autograd.Variable(drugf.cuda(CUDA_ID))
-			cuda_labels = torch.autograd.Variable(labels.cuda(CUDA_ID))
+				cuda_cellf = torch.autograd.Variable(cellf.cuda(CUDA_ID))
+				cuda_graphf = torch.autograd.Variable(graphf.cuda(CUDA_ID))
+				cuda_drugf = torch.autograd.Variable(drugf.cuda(CUDA_ID))
+				cuda_labels = torch.autograd.Variable(labels.cuda(CUDA_ID))
+				# non-batch
+				# Because of GCN/GAT in drug embedding, we can not load the batched data. 
+				# Let's recover `gene_input` to `batch_size=1`.
+				# cuda_labels = cuda_labels.unsqueeze(0)
 
-			# Forward + Backward + Optimize
-			optimizer.zero_grad()  # zero the gradient buffer
+				# Forward + Backward + Optimize
+				optimizer.zero_grad()  # zero the gradient buffer
 
-			# Here term_NN_out_map is a dictionary 
-			aux_out_map, _ = model(cuda_cellf, cuda_drugf, cuda_graphf)
+				# Here term_NN_out_map is a dictionary 
+				aux_out_map, _ = model(cuda_cellf, cuda_drugf, cuda_graphf)
 
-			if train_predict.size()[0] == 0:
-				train_predict = aux_out_map['final'].data
-			else:
-				train_predict = torch.cat([train_predict, aux_out_map['final'].data], dim=0)
+				if train_predict.size()[0] == 0:
+					train_predict = aux_out_map['final'].data
+				else:
+					train_predict = torch.cat([train_predict, aux_out_map['final'].data], dim=0)
 
-			total_loss = 0	
-			for name, output in aux_out_map.items():
-				loss = nn.MSELoss()
-				if name == 'final':
-					total_loss += loss(output, cuda_labels)
-				else: # change 0.2 to smaller one for big terms
-					total_loss += 0.2 * loss(output, cuda_labels)
+				total_loss = 0	
+				for name, output in aux_out_map.items():
+					loss = nn.MSELoss()
+					if name == 'final': 
+						total_loss += loss(output, cuda_labels)
+					else: # change 0.2 to smaller one for big terms
+						total_loss += 0.2 * loss(output, cuda_labels)
 
-			total_loss.backward()
+				# update bar
+				bar.set_description('Train')
+				bar.set_postfix(loss=total_loss.item())
+				bar.update(1)
 
-			for name, param in model.named_parameters():
-				if '_direct_gene_layer.weight' not in name:
-					continue
-				term_name = name.split('_')[0]
-				#print name, param.grad.data.size(), term_mask_map[term_name].size()
-				param.grad.data = torch.mul(param.grad.data, term_mask_map[term_name])
+				total_loss.backward()
 
-			optimizer.step()
+				for name, param in model.named_parameters():
+					if '_direct_gene_layer.weight' not in name:
+						continue
+					term_name = name.split('_')[0]
+					#print name, param.grad.data.size(), term_mask_map[term_name].size()
+					param.grad.data = torch.mul(param.grad.data, term_mask_map[term_name])
+
+				optimizer.step()
 
 		train_corr = pearson_corr(train_predict, train_label_gpu)
 
@@ -116,20 +133,24 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 		
 		test_predict = torch.zeros(0,0).cuda(CUDA_ID)
 
-		for i, (inputdata, labels) in enumerate(test_loader):
-			# Convert torch tensor to Variable
-			cellf, graphf, drugf = build_input_seperately(inputdata, cell_features, drug_graphs, drug_features) # inputdata are drugid and cellid
+		with tqdm(total=len(test_loader)) as bar:
+			for i, (inputdata, labels) in enumerate(test_loader):
+				# Convert torch tensor to Variable
+				cellf, graphf, drugf = build_input_seperately(inputdata, cell_features, drug_graphs, drug_features) # inputdata are drugid and cellid
 
-			cuda_cellf = torch.autograd.Variable(cellf.cuda(CUDA_ID))
-			cuda_graphf = torch.autograd.Variable(graphf.cuda(CUDA_ID))
-			cuda_drugf = torch.autograd.Variable(drugf.cuda(CUDA_ID))
+				cuda_cellf = torch.autograd.Variable(cellf.cuda(CUDA_ID))
+				cuda_graphf = torch.autograd.Variable(graphf.cuda(CUDA_ID))
+				cuda_drugf = torch.autograd.Variable(drugf.cuda(CUDA_ID))
 
-			aux_out_map, _ = model(cuda_cellf, cuda_drugf, cuda_graphf)
+				aux_out_map, _ = model(cuda_cellf, cuda_drugf, cuda_graphf)
 
-			if test_predict.size()[0] == 0:
-				test_predict = aux_out_map['final'].data
-			else:
-				test_predict = torch.cat([test_predict, aux_out_map['final'].data], dim=0)
+				bar.set_description('Eval')
+				bar.update(1)
+
+				if test_predict.size()[0] == 0:
+					test_predict = aux_out_map['final'].data
+				else:
+					test_predict = torch.cat([test_predict, aux_out_map['final'].data], dim=0)
 
 		test_corr = pearson_corr(test_predict, test_label_gpu)
 

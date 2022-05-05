@@ -1,67 +1,33 @@
 <!--
  * @Date: 2022-04-30 16:20:28
  * @LastEditors: yuhhong
- * @LastEditTime: 2022-05-03 22:45:12
+ * @LastEditTime: 2022-05-04 19:51:58
 -->
 # I529 - Experiments on DrugCell
 
 
 
-<img src="./img/drugcell_graph.png" width="800">
+<img src="./img/drugcell_graph.png">
 
 This is the final project of I-529. We did the following experiments based on DrugCell:
 
 - Using unhashed fingerprints of drugs;
 - Using Graph Convolution Network (GCN) to embed drugs.  
 
+To train a GCN/GAT in batchwise, we build up the model parallelly shown in following figure, referring this [issue](https://github.com/tkipf/gcn/issues/4). 
+
+<img src="./img/barchwised_gcn.png">
+
 The results are: 
 
-| Model                                            | Test Pearson Corr |
-|--------------------------------------------------|-------------------|
-| Pretrained model                                 | 0.822805          |
-| Train on `drugcell_all.txt`                      | 0.808271          |
-| Train on `drugcell_all.txt` & using unhashed FP  | 0.807748          |
-| Train on `drugcell_train.txt`                    | 0.445488          |
-| Train on `drugcell_train.txt` & drug graph (GCN) | 0.234693          |
+| Model                                            | Test Pearson Corr | Scripts                                            |
+|--------------------------------------------------|-------------------|----------------------------------------------------|
+| Pretrained model                                 | 0.822805          | `test_pretrain.sh`                                 |
+| Train on `drugcell_all.txt`                      | 0.808271          | `ours_train.sh` & `ours_test.sh`                   |
+| Train on `drugcell_all.txt` & using unhashed FP  | 0.807748          | `ours_train_unhash.sh` & `ours_test_unhash.sh`     |
+| Train on `drugcell_train.txt`                    | 0.445488          | `commandline_train.sh` & `commandline_test_gpu.sh` |
+| Train on `drugcell_train.txt` & drug graph       | 0.234693          | `ours_train_graph.sh` & `ours_test_graph.sh`       |
 
-
-
-<!-- ## Setup TorchDrug
-
-```bash
-# pytorch
-conda install pytorch==1.10.0 torchvision==0.11.0 torchaudio==0.10.0 cudatoolkit=11.3 -c pytorch -c conda-forge
-# pytorch-scatter
-conda install pytorch-scatter -c pyg
-# torchdrug
-pip install torchdrug
-``` -->
-
-<!-- ## Pre 
-
-```
-1. Model description (30 pts)
-  - DrugCell
-    - Data encoding:
-      - genotypes are encoded to binary mutations
-      - drugs are encoded to a hashed binary vector of Morgan fingerprint
-    - Model
-  - *graph*:
-    - Data encoding:
-      - genotypes are encoded to binary mutations
-      - drugs are encoded to adjacency matrix and features matrix
-    - Using a graph model embedding the drugs
-
-2. Data and Metric (20 pts)
-  - Data: the Cancer Therapeutics Response Portal (CTRP) v2 and the Genomics of Drug Sensitivity in Cancer (GDSC) database from DrugCell
-  - Metric: Pearson correlation
-  
-3. Results and Conclusion (40 pts)
-  - hash or unhash do not have an obvious effect on prediction
-  - expect graph model can embed better than fingerprint
-
-4. Q&A (10 pts)
-``` -->
 
 
 ## Dataset
@@ -77,18 +43,22 @@ $ cat drugcell_test.txt | wc -l
 
 
 
-## Train on the whole dataset
+## Experiments
 
-The pretrained model and whole dataset can be download [here](http://drugcell.ucsd.edu/downloads).
+The pretrained model and whole dataset can be download [here](http://drugcell.ucsd.edu/downloads). Please set up the environment as described in `./DrugCell_README.md`. Then install `rdkit` for loading drug graph and `tqdm` for showing the process bar by following command:  
 
 ```bash
-# 1. test the pretrained model
-./commandline_test_gpu.sh
+conda install -c rdkit rdkit
+conda install -c conda-forge tqdm
+```
 
-Total number of cell lines = 1225
-Total number of drugs = 684
-Total number of genes = 3008
-Test pearson corr       GO:0008150      0.822805
+Here are the experiment scripts: 
+
+```bash
+conda activate pytorch3drugcell
+
+# 1. test the pretrained model
+./test_pretrain.sh
 
 # 2. train our own model
 ./ours_train.sh
