@@ -1,7 +1,7 @@
 ###
  # @Date: 2022-04-28 12:56:40
  # @LastEditors: yuhhong
- # @LastEditTime: 2022-05-05 11:38:05
+ # @LastEditTime: 2022-05-05 14:08:59
 ### 
 #!/bin/bash
 inputdir="../data/"
@@ -27,4 +27,4 @@ fi
 mkdir -p $resultdir
 mkdir -p $hiddendir
 
-python -u ../code/predict_drugcell.py -gene2id $gene2idfile -cell2id $cell2idfile -drug2id $drug2idfile -genotype $mutationfile -fingerprint $drugfile -hidden $hiddendir -result $resultdir -predict $inputdir/drugcell_test.txt -load $modelfile -cuda $cudaid > test_sample.log
+python -u ../code/predict_our_drugcell_graph.py -gene2id $gene2idfile -cell2id $cell2idfile -drug2id $drug2idfile -genotype $mutationfile -fingerprint $drugfile -hidden $hiddendir -result $resultdir -predict $inputdir/drugcell_test.txt -load $modelfile -cuda $cudaid

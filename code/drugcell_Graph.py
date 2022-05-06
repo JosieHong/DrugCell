@@ -9,7 +9,7 @@ from util import *
 
 class drugcell_graph(nn.Module):
 
-	def __init__(self, term_size_map, term_direct_gene_map, dG, ngene, ndrug, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, batch_size):
+	def __init__(self, term_size_map, term_direct_gene_map, dG, ngene, ndrug, natom, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, batch_size):
 	
 		super(drugcell_graph, self).__init__()
 
@@ -27,6 +27,7 @@ class drugcell_graph(nn.Module):
 		self.gene_dim = ngene			   
 		self.drug_dim = ndrug
 		self.batch_size = batch_size
+		self.atom_num = natom
 
 		# add modules for neural networks to process genotypes
 		self.contruct_direct_gene_layer()
@@ -82,7 +83,7 @@ class drugcell_graph(nn.Module):
 
 	# 		input_size = self.num_hiddens_drug[i]
 
-	# add graph gcn to drugcell
+	# add graph gcn/gat to drugcell
 	def construct_GNN_drug(self):
 		input_size = self.drug_dim * self.batch_size
 		
@@ -92,6 +93,8 @@ class drugcell_graph(nn.Module):
 			# Simple GAT
 			self.add_module('drug_graph_layer_' + str(i+1), simple_gat_layer(input_size, self.num_hiddens_drug[i], dropout=0.2, alpha=0.02))		
 			input_size = self.num_hiddens_drug[i]
+
+		self.add_module('drug_linear_layer', nn.Linear(self.atom_num, 1))
 
 	# start from bottom (leaves), and start building a neural network using the given ontology
 	# adding modules --- the modules are not connected yet
@@ -185,15 +188,23 @@ class drugcell_graph(nn.Module):
 		for i in range(1, len(self.num_hiddens_drug)+1, 1):
 			drug_out = F.relu(self._modules['drug_graph_layer_' + str(i)](drug_out, drug_graph))
 
-		drug_out = drug_out.view(-1, self.batch_size, drug_out.size()[1]) # torch.Size([1200, 32]) -> torch.Size([300, 4, 32])
-		# max pooling
-		drug_out = torch.max(drug_out, dim=0)[0].squeeze() # torch.Size([4, 32])
+		# reshape the drug embedding vector: torch.Size([1200, 32]) -> torch.Size([300, 4, 32])
+		# atom_num = int(drug_out.size()[0]/self.batch_size)
+		drug_graph_reshape = torch.zeros((self.atom_num, self.batch_size, drug_out.size()[1])).cuda()
+		for i in range(self.batch_size):
+			drug_graph_reshape[:, i, :] = drug_out[i*self.atom_num, :]
+		# torch.Size([300, 4, 32]) -> torch.Size([300, 4*32]) -> torch.Size([4*32, 300])
+		drug_graph_reshape = drug_graph_reshape.view(-1, drug_graph_reshape.size()[1]*drug_graph_reshape.size()[2]).permute(1, 0)
+		drug_graph_reshape = self._modules['drug_linear_layer'](drug_graph_reshape).squeeze() # torch.Size([4*32, 1])
+		drug_graph_reshape = drug_graph_reshape.view(self.batch_size, -1) # torch.Size([32, 4])
+		# max pooling: torch.Size([300, 4, 32]) -> torch.Size([4, 32])
+		# drug_graph_reshape = torch.max(drug_graph_reshape, dim=0)[0]
 
 		# connect two neural networks at the top #################################################
 		# non-batch
 		# final_input = torch.cat((term_NN_out_map[self.root], drug_out.unsqueeze(0)), 1)
 		# batch
-		final_input = torch.cat((term_NN_out_map[self.root], drug_out), 1)
+		final_input = torch.cat((term_NN_out_map[self.root], drug_graph_reshape), 1)
 
 		# When the batch_size=1, we do not need batch_norm. 
 		# out = self._modules['final_batchnorm_layer'](torch.tanh(self._modules['final_linear_layer'](final_input)))

@@ -1,7 +1,7 @@
 <!--
  * @Date: 2022-04-30 16:20:28
  * @LastEditors: yuhhong
- * @LastEditTime: 2022-05-04 19:51:58
+ * @LastEditTime: 2022-05-05 13:59:48
 -->
 # I529 - Experiments on DrugCell
 
@@ -52,23 +52,24 @@ conda install -c rdkit rdkit
 conda install -c conda-forge tqdm
 ```
 
-Here are the experiment scripts: 
+All the experiments' scripts are in `./sample/`. Please run them as following example: 
 
 ```bash
 conda activate pytorch3drugcell
+cd sample
 
-# 1. test the pretrained model
+# test the pretrained model
 ./test_pretrain.sh
 
-# 2. train our own model
+# train and test our own model
 ./ours_train.sh
+./ours_test.sh
 
 # other exp
 ./ours_train_unhash.sh
+./ours_test_unhash.sh
 ./ours_train_graph.sh
-
-# 3. test our own model
-./ours_test.sh
+./ours_test_graph.sh
 ```
 
 

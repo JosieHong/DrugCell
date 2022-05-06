@@ -29,19 +29,19 @@ def create_term_mask(term_direct_gene_map, gene_dim):
 	return term_mask_map
 
  
-def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_dim, drug_dim, model_save_folder, train_epochs, batch_size, learning_rate, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, cell_features, drug_graphs, drug_features):
+def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_dim, drug_dim, atom_num, model_save_folder, train_epochs, batch_size, learning_rate, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, cell_features, drug_graphs, drug_features):
 
 	epoch_start_time = time.time()
 	best_model = 0
 	max_corr = 0
 
 	# dcell neural network
-	model = drugcell_graph(term_size_map, term_direct_gene_map, dG, gene_dim, drug_dim, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, batch_size)
+	model = drugcell_graph(term_size_map, term_direct_gene_map, dG, gene_dim, drug_dim, atom_num, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, batch_size)
 
 	train_feature, train_label, test_feature, test_label = train_data
 
-	train_label_gpu = torch.autograd.Variable(train_label.cuda(CUDA_ID))
-	test_label_gpu = torch.autograd.Variable(test_label.cuda(CUDA_ID))
+	# train_label_gpu = torch.autograd.Variable(train_label.cuda(CUDA_ID))
+	# test_label_gpu = torch.autograd.Variable(test_label.cuda(CUDA_ID))
 
 	model.cuda(CUDA_ID)
 
@@ -59,17 +59,18 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 			param.data = param.data * 0.1
 	
 	# non-batch
-	# train_loader = du.DataLoader(du.TensorDataset(train_feature,train_label), batch_size=None, shuffle=False)
+	# train_loader = du.DataLoader(du.TensorDataset(train_feature,train_label), batch_size=None, shuffle=True)
 	# test_loader = du.DataLoader(du.TensorDataset(test_feature,test_label), batch_size=None, shuffle=False)
 	# batch
-	train_loader = du.DataLoader(du.TensorDataset(train_feature,train_label), batch_size=batch_size, shuffle=False)
-	test_loader = du.DataLoader(du.TensorDataset(test_feature,test_label), batch_size=batch_size, shuffle=False)
+	train_loader = du.DataLoader(du.TensorDataset(train_feature,train_label), batch_size=batch_size, shuffle=False, drop_last=True) # `drop_last=True`, because we will concatenate the graph features
+	test_loader = du.DataLoader(du.TensorDataset(test_feature,test_label), batch_size=batch_size, shuffle=False, drop_last=True)
 
 	for epoch in range(train_epochs):
 
 		#Train
 		model.train()
 		train_predict = torch.zeros(0,0).cuda(CUDA_ID)
+		train_label = torch.zeros(0,0).cuda(CUDA_ID)
 
 		with tqdm(total=len(train_loader)) as bar:
 			for i, (inputdata, labels) in enumerate(train_loader):
@@ -96,9 +97,12 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 
 				if train_predict.size()[0] == 0:
 					train_predict = aux_out_map['final'].data
+					train_label = cuda_labels
 				else:
 					train_predict = torch.cat([train_predict, aux_out_map['final'].data], dim=0)
+					train_label = torch.cat([train_label, cuda_labels], dim=0)
 
+				# j0sie: why calculate loss on every layer? 
 				total_loss = 0	
 				for name, output in aux_out_map.items():
 					loss = nn.MSELoss()
@@ -106,6 +110,8 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 						total_loss += loss(output, cuda_labels)
 					else: # change 0.2 to smaller one for big terms
 						total_loss += 0.2 * loss(output, cuda_labels)
+				# loss = nn.MSELoss()
+				# total_loss = loss(aux_out_map['final'], cuda_labels)
 
 				# update bar
 				bar.set_description('Train')
@@ -123,7 +129,8 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 
 				optimizer.step()
 
-		train_corr = pearson_corr(train_predict, train_label_gpu)
+		train_corr = pearson_corr(train_predict, train_label)
+		train_mse = mean_squard_error(train_predict, train_label)
 
 		#if epoch % 10 == 0:
 		torch.save(model, model_save_folder + '/model_' + str(epoch) + '.pt')
@@ -132,15 +139,20 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 		model.eval()
 		
 		test_predict = torch.zeros(0,0).cuda(CUDA_ID)
+		test_label = torch.zeros(0,0).cuda(CUDA_ID)
 
 		with tqdm(total=len(test_loader)) as bar:
 			for i, (inputdata, labels) in enumerate(test_loader):
 				# Convert torch tensor to Variable
-				cellf, graphf, drugf = build_input_seperately(inputdata, cell_features, drug_graphs, drug_features) # inputdata are drugid and cellid
+				# non-batch
+				# cellf, graphf, drugf = build_input_seperately(inputdata, cell_features, drug_graphs, drug_features) # inputdata are drugid and cellid
+				# batch
+				cellf, graphf, drugf = build_input_seperately_batched(inputdata, cell_features, drug_graphs, drug_features, batch_size) # inputdata are drugid and cellid
 
-				cuda_cellf = torch.autograd.Variable(cellf.cuda(CUDA_ID))
-				cuda_graphf = torch.autograd.Variable(graphf.cuda(CUDA_ID))
-				cuda_drugf = torch.autograd.Variable(drugf.cuda(CUDA_ID))
+				cuda_cellf = torch.autograd.Variable(cellf.cuda(CUDA_ID), requires_grad=False)
+				cuda_graphf = torch.autograd.Variable(graphf.cuda(CUDA_ID), requires_grad=False)
+				cuda_drugf = torch.autograd.Variable(drugf.cuda(CUDA_ID), requires_grad=False)
+				cuda_labels = torch.autograd.Variable(labels.cuda(CUDA_ID), requires_grad=False)
 
 				aux_out_map, _ = model(cuda_cellf, cuda_drugf, cuda_graphf)
 
@@ -149,13 +161,16 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 
 				if test_predict.size()[0] == 0:
 					test_predict = aux_out_map['final'].data
-				else:
+					test_label = cuda_labels
+				else: 
 					test_predict = torch.cat([test_predict, aux_out_map['final'].data], dim=0)
+					test_label = torch.cat([test_label, cuda_labels], dim=0)
 
-		test_corr = pearson_corr(test_predict, test_label_gpu)
+		test_corr = pearson_corr(test_predict, test_label)
+		test_mse = mean_squard_error(test_predict, test_label)
 
 		epoch_end_time = time.time()
-		print("epoch\t%d\tcuda_id\t%d\ttrain_corr\t%.6f\tval_corr\t%.6f\ttotal_loss\t%.6f\telapsed_time\t%s" % (epoch, CUDA_ID, train_corr, test_corr, total_loss, epoch_end_time-epoch_start_time))
+		print("epoch\t%d\tcuda_id\t%d\ttrain_corr\t%.6f\ttrain_mse\t%.6f\tval_corr\t%.6f\tval_mse\t%.6f\ttotal_loss\t%.6f\telapsed_time\t%s" % (epoch, CUDA_ID, train_corr, train_mse, test_corr, test_mse, total_loss, epoch_end_time-epoch_start_time))
 		epoch_start_time = epoch_end_time
 	
 		if test_corr >= max_corr:
@@ -180,6 +195,7 @@ if __name__ == '__main__':
 	parser.add_argument('-gene2id', help='Gene to ID mapping file', type=str)
 	parser.add_argument('-drug2id', help='Drug to ID mapping file', type=str)
 	parser.add_argument('-cell2id', help='Cell to ID mapping file', type=str)
+	parser.add_argument('-atomnum', help='number of atoms in each drug', type=int, default=300)
 
 	parser.add_argument('-genotype_hiddens', help='Mapping for the number of neurons in each term in genotype parts', type=int, default=6)
 	parser.add_argument('-drug_hiddens', help='Mapping for the number of neurons in each layer', type=str, default='100,50,6')
@@ -198,8 +214,7 @@ if __name__ == '__main__':
 
 	# load cell/drug features
 	cell_features = np.genfromtxt(opt.genotype, delimiter=',')
-	# drug_features = np.genfromtxt(opt.fingerprint, delimiter=',')
-	drug_graphs, drug_features = load_our_drug_graph_features(opt.drug2id)
+	drug_graphs, drug_features = load_our_drug_graph_features(opt.drug2id, opt.atomnum)
 	# print(drug_graphs.shape, drug_features.shape) # (684, 300, 300) (684, 300, 4)
 
 	num_cells = len(cell2id_mapping)
@@ -220,5 +235,5 @@ if __name__ == '__main__':
 
 	CUDA_ID = opt.cuda
 
-	train_model(root, term_size_map, term_direct_gene_map, dG, train_data, num_genes, drug_dim, opt.modeldir, opt.epoch, opt.batchsize, opt.lr, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, cell_features, drug_graphs, drug_features)
+	train_model(root, term_size_map, term_direct_gene_map, dG, train_data, num_genes, drug_dim, opt.atomnum, opt.modeldir, opt.epoch, opt.batchsize, opt.lr, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, cell_features, drug_graphs, drug_features)
 

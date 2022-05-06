@@ -15,6 +15,9 @@ def pearson_corr(x, y):
 
 	return torch.sum(xx*yy) / (torch.norm(xx, 2)*torch.norm(yy,2))
 
+def mean_squard_error(x, y):
+	return ((x - y)**2).mean()
+
 def load_ontology(file_name, gene2id_mapping):
 
 	dG = nx.DiGraph()
@@ -174,7 +177,7 @@ def load_our_drug_fp(drug2id_mapping_file):
 
 	return np.array(drug_features)
 
-def load_our_drug_graph_features(drug2id_mapping_file): 
+def load_our_drug_graph_features(drug2id_mapping_file, max_atom_num=300): 
 	
 	with open(drug2id_mapping_file, 'r') as f:
 		smiles_list = [d.split()[1] for d in f.read().split('\n') if d != '']
@@ -182,7 +185,6 @@ def load_our_drug_graph_features(drug2id_mapping_file):
 	drug_graphs = []
 	drug_features = []
 	
-	max_atom_num = 300
 	for smiles in smiles_list:
 		mol = Chem.MolFromSmiles(smiles)
 		drug_graphs.append(create_graph(mol, max_atom_num))
@@ -201,7 +203,14 @@ def create_graph(mol, size=50):
 	return A
 
 def create_feature(mol, size=50): 
-	X = np.zeros((size, 8))
+	atom_map = {'C': [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'H': [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+				'O': [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'N': [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+				'F': [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0], 'S': [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], 
+				'Cl': [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0], 'P': [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], 
+				'B': [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], 'Br': [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], 
+				'I': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0], 'Pt': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+				'As': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]}
+	X = np.zeros((size, 21))
 	for atom in mol.GetAtoms():
 		X[atom.GetIdx(), 0] = atom.GetMass() # 1. atomic mass;
 		X[atom.GetIdx(), 1] = atom.GetTotalNumHs() # 2. total number of Hs (explicit and implicit);
@@ -211,6 +220,7 @@ def create_feature(mol, size=50):
 		X[atom.GetIdx(), 5] = atom.GetFormalCharge() # 6. atomic charge;
 		X[atom.GetIdx(), 6] = atom.GetNumImplicitHs() # 7. number of implicit hydrogens;
 		X[atom.GetIdx(), 7] = int(atom.IsInRing()) # 8. Is in a ring 
+		X[atom.GetIdx(), 8:] = np.array(atom_map[atom.GetSymbol()])
 	return X
 
 def build_input_seperately_batched(input_data, cell_features, graph_features, drug_features, batch_size): 
