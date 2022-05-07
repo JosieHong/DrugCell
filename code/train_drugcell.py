@@ -97,7 +97,7 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 					total_loss += loss(output, cuda_labels)
 				else: # change 0.2 to smaller one for big terms
 					total_loss += 0.2 * loss(output, cuda_labels)
-
+			
 			total_loss.backward()
 
 			for name, param in model.named_parameters():
@@ -110,6 +110,7 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 			optimizer.step()
 
 		train_corr = pearson_corr(train_predict, train_label_gpu)
+		train_mse = mean_squard_error(train_predict, train_label_gpu)
 
 		#if epoch % 10 == 0:
 		torch.save(model, model_save_folder + '/model_' + str(epoch) + '.pt')
@@ -132,9 +133,10 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 				test_predict = torch.cat([test_predict, aux_out_map['final'].data], dim=0)
 
 		test_corr = pearson_corr(test_predict, test_label_gpu)
+		test_mse = mean_squard_error(test_predict, test_label_gpu)
 
 		epoch_end_time = time.time()
-		print("epoch\t%d\tcuda_id\t%d\ttrain_corr\t%.6f\tval_corr\t%.6f\ttotal_loss\t%.6f\telapsed_time\t%s" % (epoch, CUDA_ID, train_corr, test_corr, total_loss, epoch_end_time-epoch_start_time))
+		print("epoch\t%d\tcuda_id\t%d\ttrain_corr\t%.6f\ttrain_mse\t%.6f\tval_corr\t%.6f\ttest_mse\t%.6f\ttotal_loss\t%.6f\telapsed_time\t%s" % (epoch, CUDA_ID, train_corr, train_mse, test_corr, test_mse, total_loss, epoch_end_time-epoch_start_time))
 		epoch_start_time = epoch_end_time
 	
 		if test_corr >= max_corr:

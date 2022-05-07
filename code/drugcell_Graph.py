@@ -193,12 +193,18 @@ class drugcell_graph(nn.Module):
 		drug_graph_reshape = torch.zeros((self.atom_num, self.batch_size, drug_out.size()[1])).cuda()
 		for i in range(self.batch_size):
 			drug_graph_reshape[:, i, :] = drug_out[i*self.atom_num, :]
+		
+		# mlp
 		# torch.Size([300, 4, 32]) -> torch.Size([300, 4*32]) -> torch.Size([4*32, 300])
-		drug_graph_reshape = drug_graph_reshape.view(-1, drug_graph_reshape.size()[1]*drug_graph_reshape.size()[2]).permute(1, 0)
-		drug_graph_reshape = self._modules['drug_linear_layer'](drug_graph_reshape).squeeze() # torch.Size([4*32, 1])
-		drug_graph_reshape = drug_graph_reshape.view(self.batch_size, -1) # torch.Size([32, 4])
+		# drug_graph_reshape = drug_graph_reshape.view(-1, drug_graph_reshape.size()[1]*drug_graph_reshape.size()[2]).permute(1, 0)
+		# drug_graph_reshape = self._modules['drug_linear_layer'](drug_graph_reshape).squeeze() # torch.Size([4*32, 1])
+		# drug_graph_reshape = drug_graph_reshape.view(self.batch_size, -1) # torch.Size([32, 4])
+
 		# max pooling: torch.Size([300, 4, 32]) -> torch.Size([4, 32])
 		# drug_graph_reshape = torch.max(drug_graph_reshape, dim=0)[0]
+
+		# sum: torch.Size([300, 4, 32]) -> torch.Size([4, 32])
+		drug_graph_reshape = drug_graph_reshape.sum(dim=0)
 
 		# connect two neural networks at the top #################################################
 		# non-batch

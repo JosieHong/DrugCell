@@ -1,7 +1,7 @@
 '''
 Date: 2022-04-29 12:02:15
 LastEditors: yuhhong
-LastEditTime: 2022-04-30 15:25:44
+LastEditTime: 2022-05-07 11:20:49
 '''
 import sys
 import os
@@ -59,7 +59,9 @@ def predict_dcell(predict_data, gene_dim, drug_dim, model_file, hidden_folder, b
 		batch_num += 1
 
 	test_corr = pearson_corr(test_predict, predict_label_gpu)
-	print("Test pearson corr\t%s\t%.6f" % (model.root, test_corr))
+	test_mse = mean_squard_error(test_predict, predict_label_gpu)
+
+	print("Root\t%s\nTest pearson corr\t%.6f\nTest mean square error\t%.6f" % (model.root, test_corr, test_mse))
 
 	np.savetxt(result_file+'/drugcell.predict', test_predict.cpu().numpy(),'%.4e')
 

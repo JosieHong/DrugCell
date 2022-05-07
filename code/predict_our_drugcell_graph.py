@@ -1,7 +1,7 @@
 '''
 Date: 2022-04-29 12:02:15
 LastEditors: yuhhong
-LastEditTime: 2022-05-06 16:47:13
+LastEditTime: 2022-05-07 11:22:53
 '''
 import numpy as np
 import torch
@@ -22,7 +22,7 @@ def predict_dcell(predict_data, gene_dim, drug_dim, model_file, hidden_folder, b
 	model.cuda(CUDA_ID)
 	model.eval()
 
-	test_loader = du.DataLoader(du.TensorDataset(predict_feature,predict_label), batch_size=batch_size, shuffle=False, drop_last=True)
+	test_loader = du.DataLoader(du.TensorDataset(predict_feature,predict_label), batch_size=batch_size, shuffle=False, drop_last=False)
 
 	#Test
 	test_predict = torch.zeros(0,0).cuda(CUDA_ID)
@@ -57,7 +57,7 @@ def predict_dcell(predict_data, gene_dim, drug_dim, model_file, hidden_folder, b
 
 	test_corr = pearson_corr(test_predict, predict_label_gpu)
 	test_mse = mean_squard_error(test_predict, test_label)
-	print("Test pearson corr\t%s\t%.6f, mean square error\t%.6f" % (model.root, test_corr, test_mse))
+	print("Root\t%s\nTest pearson corr\t%.6f\nTest mean square error\t%.6f" % (model.root, test_corr, test_mse))
 
 	np.savetxt(result_file+'/drugcell.predict', test_predict.cpu().numpy(),'%.4e')
 

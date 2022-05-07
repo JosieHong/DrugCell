@@ -1,7 +1,7 @@
 <!--
  * @Date: 2022-04-30 16:20:28
  * @LastEditors: yuhhong
- * @LastEditTime: 2022-05-05 13:59:48
+ * @LastEditTime: 2022-05-07 11:32:16
 -->
 # I529 - Experiments on DrugCell
 
@@ -11,26 +11,31 @@
 
 This is the final project of I-529. We did the following experiments based on DrugCell:
 
-- Using unhashed fingerprints of drugs;
-- Using Graph Convolution Network (GCN) to embed drugs.  
-
-To train a GCN/GAT in batchwise, we build up the model parallelly shown in following figure, referring this [issue](https://github.com/tkipf/gcn/issues/4). 
-
-<img src="./img/barchwised_gcn.png">
+- **Exp1**: Using unhashed fingerprints of drugs;
+- **Exp2**: Using Graph Convolution Networks (GCN/GAT) to embed drugs; To traina GCN/GAT in batchwise: We build up the model parallelly shown in following figure, referring this [issue](https://github.com/tkipf/gcn/issues/4). 
+  <img src="./img/barchwised_gcn.png">
+- **Eval**: More metrics: mean mean squared error (MSE), pearson correalation (PC). Different features of these two metrics are [here](https://stats.stackexchange.com/questions/314339/should-i-evaluate-my-regression-algorithm-using-mse-or-correlation).
 
 The results are: 
 
-| Model                                            | Test Pearson Corr | Scripts                                            |
-|--------------------------------------------------|-------------------|----------------------------------------------------|
-| Pretrained model                                 | 0.822805          | `test_pretrain.sh`                                 |
-| Train on `drugcell_all.txt`                      | 0.808271          | `ours_train.sh` & `ours_test.sh`                   |
-| Train on `drugcell_all.txt` & using unhashed FP  | 0.807748          | `ours_train_unhash.sh` & `ours_test_unhash.sh`     |
-| Train on `drugcell_train.txt`                    | 0.445488          | `commandline_train.sh` & `commandline_test_gpu.sh` |
-| Train on `drugcell_train.txt` & drug graph       | 0.234693          | `ours_train_graph.sh` & `ours_test_graph.sh`       |
+| Mark       | Model                                            | PC        | MSE      | Scripts                                            |
+|------------|--------------------------------------------------|-----------|----------|----------------------------------------------------|
+| Baseline   | Pretrained model*                                | 0.822805  | 0.014052 | `test_pretrain.sh`                                 |
+| Baseline   | Train on `drugcell_all.txt`                      | 0.808271  |          | `ours_train.sh` & `ours_test.sh`                   |
+| Exp1       | Train on `drugcell_all.txt` & using unhashed FP  | 0.807748  |          | `ours_train_unhash.sh` & `ours_test_unhash.sh`     |
+| Exp2       | Train on `drugcell_all.txt` & GCN                |           |          | coming soon...                                     |
+| Exp2       | Train on `drugcell_all.txt` & GAT                |           |          | coming soon...                                     |
+| Baseline   | Train on `drugcell_train.txt`                    | 0.315630  | 0.282851 | `commandline_train.sh` & `commandline_test_gpu.sh` |
+| Exp2       | Train on `drugcell_train.txt` & GCN              |           |          | coming soon...                                     |
+| Exp2       | Train on `drugcell_train.txt` & GAT              | -0.023885 | 0.040629 | `ours_train_graph.sh` & `ours_test_graph.sh`       |
+
+The pretrained model can be downloaded [here](http://drugcell.ucsd.edu/downloads). Our model perfroms better in MSE, but not good in PC. 
 
 
 
 ## Dataset
+
+The whole dataset can be download [here](http://drugcell.ucsd.edu/downloads).
 
 ```bash
 $ cat drugcell_all.txt | wc -l
@@ -45,9 +50,10 @@ $ cat drugcell_test.txt | wc -l
 
 ## Experiments
 
-The pretrained model and whole dataset can be download [here](http://drugcell.ucsd.edu/downloads). Please set up the environment as described in `./DrugCell_README.md`. Then install `rdkit` for loading drug graph and `tqdm` for showing the process bar by following command:  
+Please set up the environment as described in `./DrugCell_README.md`. Then install `rdkit` for loading drug graph and `tqdm` for showing the process bar by following command:  
 
 ```bash
+conda activate pytorch3drugcell
 conda install -c rdkit rdkit
 conda install -c conda-forge tqdm
 ```
@@ -65,9 +71,11 @@ cd sample
 ./ours_train.sh
 ./ours_test.sh
 
-# other exp
+# exp1
 ./ours_train_unhash.sh
 ./ours_test_unhash.sh
+
+# exp2
 ./ours_train_graph.sh
 ./ours_test_graph.sh
 ```

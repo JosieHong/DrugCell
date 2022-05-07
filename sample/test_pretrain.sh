@@ -19,9 +19,9 @@ if [$cudaid = ""]; then
 	cudaid=0
 fi
 
-mkdir $resultdir
-mkdir $hiddendir
+mkdir -p $resultdir
+mkdir -p $hiddendir
 
 source activate pytorch3drugcell
 
-python -u ../code/predict_drugcell.py -gene2id $gene2idfile -cell2id $cell2idfile -drug2id $drug2idfile -genotype $mutationfile -fingerprint $drugfile -hidden $hiddendir -result $resultdir -predict $inputdir/drugcell_test.txt -load $modelfile -cuda $cudaid > test_sample.log
+python -u ../code/predict_drugcell.py -gene2id $gene2idfile -cell2id $cell2idfile -drug2id $drug2idfile -genotype $mutationfile -fingerprint $drugfile -hidden $hiddendir -result $resultdir -predict $inputdir/drugcell_test.txt -load $modelfile -cuda $cudaid

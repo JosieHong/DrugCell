@@ -40,8 +40,8 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 
 	train_feature, train_label, test_feature, test_label = train_data
 
-	# train_label_gpu = torch.autograd.Variable(train_label.cuda(CUDA_ID))
-	# test_label_gpu = torch.autograd.Variable(test_label.cuda(CUDA_ID))
+	train_label_gpu = torch.autograd.Variable(train_label.cuda(CUDA_ID))
+	test_label_gpu = torch.autograd.Variable(test_label.cuda(CUDA_ID))
 
 	model.cuda(CUDA_ID)
 
@@ -62,15 +62,20 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 	# train_loader = du.DataLoader(du.TensorDataset(train_feature,train_label), batch_size=None, shuffle=True)
 	# test_loader = du.DataLoader(du.TensorDataset(test_feature,test_label), batch_size=None, shuffle=False)
 	# batch
-	train_loader = du.DataLoader(du.TensorDataset(train_feature,train_label), batch_size=batch_size, shuffle=False, drop_last=True) # `drop_last=True`, because we will concatenate the graph features
-	test_loader = du.DataLoader(du.TensorDataset(test_feature,test_label), batch_size=batch_size, shuffle=False, drop_last=True)
+	# j0sie: In theory, we need to `drop_last=True`, because we will concatenate the graph features. 
+	# But, when `drop_last=True`, `pearson_corr` is weird. So we chooes a proper batch size, and set 
+	# `drop_last=False`.  
+	assert train_feature.shape[0] % batch_size == 0 
+	assert test_feature.shape[0] % batch_size == 0 
+	train_loader = du.DataLoader(du.TensorDataset(train_feature,train_label), batch_size=batch_size, shuffle=False) 
+	test_loader = du.DataLoader(du.TensorDataset(test_feature,test_label), batch_size=batch_size, shuffle=False) 
 
 	for epoch in range(train_epochs):
 
 		#Train
 		model.train()
 		train_predict = torch.zeros(0,0).cuda(CUDA_ID)
-		train_label = torch.zeros(0,0).cuda(CUDA_ID)
+		# train_label = torch.zeros(0,0).cuda(CUDA_ID)
 
 		with tqdm(total=len(train_loader)) as bar:
 			for i, (inputdata, labels) in enumerate(train_loader):
@@ -97,10 +102,10 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 
 				if train_predict.size()[0] == 0:
 					train_predict = aux_out_map['final'].data
-					train_label = cuda_labels
+					# train_label = cuda_labels
 				else:
 					train_predict = torch.cat([train_predict, aux_out_map['final'].data], dim=0)
-					train_label = torch.cat([train_label, cuda_labels], dim=0)
+					# train_label = torch.cat([train_label, cuda_labels], dim=0)
 
 				# j0sie: why calculate loss on every layer? 
 				total_loss = 0	
@@ -129,8 +134,10 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 
 				optimizer.step()
 
-		train_corr = pearson_corr(train_predict, train_label)
-		train_mse = mean_squard_error(train_predict, train_label)
+		# train_corr = pearson_corr(train_predict, train_label)
+		# train_mse = mean_squard_error(train_predict, train_label)
+		train_corr = pearson_corr(train_predict, train_label_gpu)
+		train_mse = mean_squard_error(train_predict, train_label_gpu)
 
 		#if epoch % 10 == 0:
 		torch.save(model, model_save_folder + '/model_' + str(epoch) + '.pt')
@@ -139,7 +146,7 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 		model.eval()
 		
 		test_predict = torch.zeros(0,0).cuda(CUDA_ID)
-		test_label = torch.zeros(0,0).cuda(CUDA_ID)
+		# test_label = torch.zeros(0,0).cuda(CUDA_ID)
 
 		with tqdm(total=len(test_loader)) as bar:
 			for i, (inputdata, labels) in enumerate(test_loader):
@@ -161,13 +168,15 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 
 				if test_predict.size()[0] == 0:
 					test_predict = aux_out_map['final'].data
-					test_label = cuda_labels
+					# test_label = cuda_labels
 				else: 
 					test_predict = torch.cat([test_predict, aux_out_map['final'].data], dim=0)
-					test_label = torch.cat([test_label, cuda_labels], dim=0)
+					# test_label = torch.cat([test_label, cuda_labels], dim=0)
 
-		test_corr = pearson_corr(test_predict, test_label)
-		test_mse = mean_squard_error(test_predict, test_label)
+		# test_corr = pearson_corr(test_predict, test_label)
+		# test_mse = mean_squard_error(test_predict, test_label)
+		test_corr = pearson_corr(test_predict, test_label_gpu)
+		test_mse = mean_squard_error(test_predict, test_label_gpu)
 
 		epoch_end_time = time.time()
 		print("epoch\t%d\tcuda_id\t%d\ttrain_corr\t%.6f\ttrain_mse\t%.6f\tval_corr\t%.6f\tval_mse\t%.6f\ttotal_loss\t%.6f\telapsed_time\t%s" % (epoch, CUDA_ID, train_corr, train_mse, test_corr, test_mse, total_loss, epoch_end_time-epoch_start_time))
