@@ -1,7 +1,7 @@
 <!--
  * @Date: 2022-04-30 16:20:28
  * @LastEditors: yuhhong
- * @LastEditTime: 2022-05-07 11:32:16
+ * @LastEditTime: 2022-05-07 11:41:56
 -->
 # I529 - Experiments on DrugCell
 
@@ -11,25 +11,25 @@
 
 This is the final project of I-529. We did the following experiments based on DrugCell:
 
-- **Exp1**: Using unhashed fingerprints of drugs;
-- **Exp2**: Using Graph Convolution Networks (GCN/GAT) to embed drugs; To traina GCN/GAT in batchwise: We build up the model parallelly shown in following figure, referring this [issue](https://github.com/tkipf/gcn/issues/4). 
-  <img src="./img/barchwised_gcn.png">
-- **Eval**: More metrics: mean mean squared error (MSE), pearson correalation (PC). Different features of these two metrics are [here](https://stats.stackexchange.com/questions/314339/should-i-evaluate-my-regression-algorithm-using-mse-or-correlation).
+- Using unhashed fingerprints of drugs; Comparing the `Baseline1` and `Exp1-1`, using hashed or unhashed fingerprint will not effect significantly. 
+- Using Graph Convolution Networks (GCN/GAT) to embed drugs; To traina GCN/GAT in batchwise: We build up the model parallelly shown in following figure, referring this [issue](https://github.com/tkipf/gcn/issues/4). Comparing the `Baseline2` and `Exp2-2`, our model performs better in MSE, but not good in PC. More results are coming soon. 
+  <img src="./img/barchwised_gcn.png"> 
+- More metrics: mean mean squared error (MSE), pearson correalation (PC). Different features of these two metrics are [here](https://stats.stackexchange.com/questions/314339/should-i-evaluate-my-regression-algorithm-using-mse-or-correlation). 
 
 The results are: 
 
-| Mark       | Model                                            | PC        | MSE      | Scripts                                            |
+| Model      | Note                                             | PC        | MSE      | Scripts                                            |
 |------------|--------------------------------------------------|-----------|----------|----------------------------------------------------|
-| Baseline   | Pretrained model*                                | 0.822805  | 0.014052 | `test_pretrain.sh`                                 |
-| Baseline   | Train on `drugcell_all.txt`                      | 0.808271  |          | `ours_train.sh` & `ours_test.sh`                   |
-| Exp1       | Train on `drugcell_all.txt` & using unhashed FP  | 0.807748  |          | `ours_train_unhash.sh` & `ours_test_unhash.sh`     |
-| Exp2       | Train on `drugcell_all.txt` & GCN                |           |          | coming soon...                                     |
-| Exp2       | Train on `drugcell_all.txt` & GAT                |           |          | coming soon...                                     |
-| Baseline   | Train on `drugcell_train.txt`                    | 0.315630  | 0.282851 | `commandline_train.sh` & `commandline_test_gpu.sh` |
-| Exp2       | Train on `drugcell_train.txt` & GCN              |           |          | coming soon...                                     |
-| Exp2       | Train on `drugcell_train.txt` & GAT              | -0.023885 | 0.040629 | `ours_train_graph.sh` & `ours_test_graph.sh`       |
+| Baseline0  | Pretrained model*                                | 0.822805  | 0.014052 | `test_pretrain.sh`                                 |
+| Baseline1  | Train on `drugcell_all.txt`                      | 0.808271  |          | `ours_train.sh` & `ours_test.sh`                   |
+| Exp1-1     | Train on `drugcell_all.txt` & using unhashed FP  | 0.807748  |          | `ours_train_unhash.sh` & `ours_test_unhash.sh`     |
+| Exp1-2     | Train on `drugcell_all.txt` & GCN                |           |          | coming soon...                                     |
+| Exp1-3     | Train on `drugcell_all.txt` & GAT                |           |          | coming soon...                                     |
+| Baseline2  | Train on `drugcell_train.txt`                    | 0.315630  | 0.282851 | `commandline_train.sh` & `commandline_test_gpu.sh` |
+| Exp2-2     | Train on `drugcell_train.txt` & GCN              |           |          | coming soon...                                     |
+| Exp2-3     | Train on `drugcell_train.txt` & GAT              | -0.023885 | 0.040629 | `ours_train_graph.sh` & `ours_test_graph.sh`       |
 
-The pretrained model can be downloaded [here](http://drugcell.ucsd.edu/downloads). Our model perfroms better in MSE, but not good in PC. 
+The pretrained model can be downloaded [here](http://drugcell.ucsd.edu/downloads). 
 
 
 
