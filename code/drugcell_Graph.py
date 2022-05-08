@@ -9,14 +9,14 @@ from util import *
 
 class drugcell_graph(nn.Module):
 
-	def __init__(self, term_size_map, term_direct_gene_map, dG, ngene, ndrug, natom, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, batch_size):
-	
+	def __init__(self, term_size_map, term_direct_gene_map, dG, drug_graph, ngene, ndrug, natom, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, batch_size, device):
 		super(drugcell_graph, self).__init__()
-
+		
+		self.device = device
 		self.root = root
 		self.num_hiddens_genotype = num_hiddens_genotype
 		self.num_hiddens_drug = num_hiddens_drug
-		
+
 		# dictionary from terms to genes directly annotated with the term
 		self.term_direct_gene_map = term_direct_gene_map   
 
@@ -36,7 +36,7 @@ class drugcell_graph(nn.Module):
 		# add modules for neural networks to process drugs	
 		# self.construct_NN_drug()
 		# add graph modules to process drugs
-		self.construct_GNN_drug()
+		self.construct_GNN_drug(drug_graph)
 
 		# add modules for final layer
 		final_input_size = num_hiddens_genotype + num_hiddens_drug[-1]
@@ -84,14 +84,16 @@ class drugcell_graph(nn.Module):
 	# 		input_size = self.num_hiddens_drug[i]
 
 	# add graph gcn/gat to drugcell
-	def construct_GNN_drug(self):
+	def construct_GNN_drug(self, drug_graph):
 		input_size = self.drug_dim * self.batch_size
 		
 		for i in range(len(self.num_hiddens_drug)): 
-			# Simple GCN
-			# self.add_module('drug_graph_layer_' + str(i+1), simple_gcn_layer(input_size, self.num_hiddens_drug[i]))
-			# Simple GAT
-			self.add_module('drug_graph_layer_' + str(i+1), simple_gat_layer(input_size, self.num_hiddens_drug[i], dropout=0.2, alpha=0.02))		
+			if drug_graph == 'gcn': 
+				# Simple GCN
+				self.add_module('drug_graph_layer_' + str(i+1), simple_gcn_layer(input_size, self.num_hiddens_drug[i]))
+			else: 
+				# Simple GAT
+				self.add_module('drug_graph_layer_' + str(i+1), simple_gat_layer(input_size, self.num_hiddens_drug[i], dropout=0.2, alpha=0.02))		
 			input_size = self.num_hiddens_drug[i]
 
 		self.add_module('drug_linear_layer', nn.Linear(self.atom_num, 1))
@@ -190,7 +192,7 @@ class drugcell_graph(nn.Module):
 
 		# reshape the drug embedding vector: torch.Size([1200, 32]) -> torch.Size([300, 4, 32])
 		# atom_num = int(drug_out.size()[0]/self.batch_size)
-		drug_graph_reshape = torch.zeros((self.atom_num, self.batch_size, drug_out.size()[1])).cuda()
+		drug_graph_reshape = torch.zeros((self.atom_num, self.batch_size, drug_out.size()[1])).cuda(self.device)
 		for i in range(self.batch_size):
 			drug_graph_reshape[:, i, :] = drug_out[i*self.atom_num, :]
 		

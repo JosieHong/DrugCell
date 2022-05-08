@@ -29,14 +29,14 @@ def create_term_mask(term_direct_gene_map, gene_dim):
 	return term_mask_map
 
  
-def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_dim, drug_dim, atom_num, model_save_folder, train_epochs, batch_size, learning_rate, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, cell_features, drug_graphs, drug_features):
+def train_model(root, term_size_map, term_direct_gene_map, drug_graph, dG, train_data, gene_dim, drug_dim, atom_num, model_save_folder, train_epochs, batch_size, learning_rate, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, cell_features, drug_graphs, drug_features):
 
 	epoch_start_time = time.time()
 	best_model = 0
 	max_corr = 0
 
 	# dcell neural network
-	model = drugcell_graph(term_size_map, term_direct_gene_map, dG, gene_dim, drug_dim, atom_num, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, batch_size)
+	model = drugcell_graph(term_size_map, term_direct_gene_map, dG, drug_graph, gene_dim, drug_dim, atom_num, root, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, batch_size, device=CUDA_ID)
 
 	train_feature, train_label, test_feature, test_label = train_data
 
@@ -194,6 +194,7 @@ def train_model(root, term_size_map, term_direct_gene_map, dG, train_data, gene_
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Train dcell')
 	parser.add_argument('-onto', help='Ontology file used to guide the neural network', type=str)
+	parser.add_argument('-drug_graph', help='Graph model embedding drugs', type=str, choices=['gcn', 'gat'])
 	parser.add_argument('-train', help='Training dataset', type=str)
 	parser.add_argument('-test', help='Validation dataset', type=str)
 	parser.add_argument('-epoch', help='Training epochs for training', type=int, default=300)
@@ -244,5 +245,5 @@ if __name__ == '__main__':
 
 	CUDA_ID = opt.cuda
 
-	train_model(root, term_size_map, term_direct_gene_map, dG, train_data, num_genes, drug_dim, opt.atomnum, opt.modeldir, opt.epoch, opt.batchsize, opt.lr, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, cell_features, drug_graphs, drug_features)
+	train_model(root, term_size_map, term_direct_gene_map, opt.drug_graph, dG, train_data, num_genes, drug_dim, opt.atomnum, opt.modeldir, opt.epoch, opt.batchsize, opt.lr, num_hiddens_genotype, num_hiddens_drug, num_hiddens_final, cell_features, drug_graphs, drug_features)
 

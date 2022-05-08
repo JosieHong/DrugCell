@@ -12,7 +12,7 @@ drugfile=$inputdir"drug2fingerprint.txt"
 
 cudaid=0
 
-modeldir="./commandline_train/Model_sample"
+modeldir="./baseline1/Model_sample"
 mkdir -p $modeldir
 
 source activate pytorch3drugcell

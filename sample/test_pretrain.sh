@@ -10,8 +10,8 @@ drugfile=$inputdir"drug2fingerprint.txt"
 
 modelfile="../pretrained_model/drugcell_v1.pt"
 
-resultdir="./pretrain/Result_sample"
-hiddendir="./pretrain/Hidden_sample"
+resultdir="./baseline0/Result_sample"
+hiddendir="./baseline0/Hidden_sample"
 
 cudaid=$1
 

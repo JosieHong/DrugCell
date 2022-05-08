@@ -8,10 +8,10 @@ testdatafile=$inputdir"drugcell_test.txt"
 mutationfile=$inputdir"cell2mutation.txt"
 drugfile=$inputdir"drug2fingerprint.txt"
 
-modelfile="./commandline_train/Model_sample/model_final.pt"
+modelfile="./baseline1/Model_sample/model_final.pt"
 
-resultdir="./commandline_train/Result_sample"
-hiddendir="./commandline_train/Hidden_sample"
+resultdir="./baseline1/Result_sample"
+hiddendir="./baseline1/Hidden_sample"
 
 cudaid=$1
 

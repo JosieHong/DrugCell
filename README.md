@@ -1,7 +1,7 @@
 <!--
  * @Date: 2022-04-30 16:20:28
  * @LastEditors: yuhhong
- * @LastEditTime: 2022-05-07 11:41:56
+ * @LastEditTime: 2022-05-08 10:39:45
 -->
 # I529 - Experiments on DrugCell
 
@@ -21,13 +21,13 @@ The results are:
 | Model      | Note                                             | PC        | MSE      | Scripts                                            |
 |------------|--------------------------------------------------|-----------|----------|----------------------------------------------------|
 | Baseline0  | Pretrained model*                                | 0.822805  | 0.014052 | `test_pretrain.sh`                                 |
-| Baseline1  | Train on `drugcell_all.txt`                      | 0.808271  |          | `ours_train.sh` & `ours_test.sh`                   |
-| Exp1-1     | Train on `drugcell_all.txt` & using unhashed FP  | 0.807748  |          | `ours_train_unhash.sh` & `ours_test_unhash.sh`     |
-| Exp1-2     | Train on `drugcell_all.txt` & GCN                |           |          | coming soon...                                     |
-| Exp1-3     | Train on `drugcell_all.txt` & GAT                |           |          | coming soon...                                     |
+| Baseline1  | Train on `drugcell_all.txt`                      | 0.828568  | 0.013232 | `ours_train.sh` & `ours_test.sh`                   |
+| Exp1-1     | Train on `drugcell_all.txt` & using unhashed FP  | 0.813499  | 0.013995 | `ours_train_unhash.sh` & `ours_test_unhash.sh`     |
+| Exp1-2     | Train on `drugcell_all_cut.txt` & GCN            |           |          | `ours_train_gcn.sh` & `ours_test_gcn.sh`           |
+| Exp1-3     | Train on `drugcell_all_cut.txt` & GAT            |           |          | `ours_train_gat.sh` & `ours_test_gat.sh`           |
 | Baseline2  | Train on `drugcell_train.txt`                    | 0.315630  | 0.282851 | `commandline_train.sh` & `commandline_test_gpu.sh` |
-| Exp2-2     | Train on `drugcell_train.txt` & GCN              |           |          | coming soon...                                     |
-| Exp2-3     | Train on `drugcell_train.txt` & GAT              | -0.023885 | 0.040629 | `ours_train_graph.sh` & `ours_test_graph.sh`       |
+| Exp2-2     | Train on `drugcell_train.txt` & GCN              | -0.036170 | 0.040641 | `ours_train_gcn_part.sh` & `ours_test_gcn_part.sh` |
+| Exp2-3     | Train on `drugcell_train.txt` & GAT              | -0.023885 | 0.040629 | `ours_train_gat_part.sh` & `ours_test_gat_part.sh` |
 
 The pretrained model can be downloaded [here](http://drugcell.ucsd.edu/downloads). 
 
@@ -40,6 +40,8 @@ The whole dataset can be download [here](http://drugcell.ucsd.edu/downloads).
 ```bash
 $ cat drugcell_all.txt | wc -l
 509294
+$ cat drugcell_all_cut.txt | wc -l
+509280
 $ cat drugcell_train.txt | wc -l
 10000
 $ cat drugcell_test.txt | wc -l
@@ -71,13 +73,9 @@ cd sample
 ./ours_train.sh
 ./ours_test.sh
 
-# exp1
+# More experiments' scripts can be found in the table. 
 ./ours_train_unhash.sh
 ./ours_test_unhash.sh
-
-# exp2
-./ours_train_graph.sh
-./ours_test_graph.sh
 ```
 
 
